@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kinetic Kelvin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF1F7; --surface:#FFFFFF; --ink:#1B1F3B; --muted:#565C7D; --line:#D3D8E8;
+  --accent:#3550C8; --on-accent:#FFFFFF;
+  --good:#1D7F55; --good-bg:#E2F3EA; --bad:#B8324A; --bad-bg:#F8E3E7;
+  --screen:#12142A;
+  color-scheme: light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#181A31; --surface:#22254A; --ink:#E9EBF7; --muted:#A6ABCB; --line:#3A3E6B;
+    --accent:#93A5FF; --on-accent:#12142A;
+    --good:#5BCB95; --good-bg:#1D3B33; --bad:#FF8A9B; --bad-bg:#45233A;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#181A31; --surface:#22254A; --ink:#E9EBF7; --muted:#A6ABCB; --line:#3A3E6B;
+  --accent:#93A5FF; --on-accent:#12142A;
+  --good:#5BCB95; --good-bg:#1D3B33; --bad:#FF8A9B; --bad-bg:#45233A;
+  color-scheme: dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px);}
+*,*::before,*::after{box-sizing:inherit;}
+[hidden]{display:none !important;}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size:1.0625rem; line-height:1.5;
+}
+.wrap{max-width:1120px; margin:0 auto; padding:clamp(16px,3vw,32px);}
+h1,h2,.display{font-family:"Bricolage Grotesque","Atkinson Hyperlegible",system-ui,sans-serif;}
+header.top{display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:16px 24px; margin-bottom:22px;}
+h1{font-weight:800; font-size:clamp(2.2rem,6vw,3.5rem); line-height:.95; letter-spacing:-0.025em; margin:0;}
+.lede{margin:10px 0 0; color:var(--muted); max-width:54ch;}
+h2{font-weight:700; font-size:1.3rem; margin:0 0 10px; letter-spacing:-0.01em;}
+sub,sup{font-size:.7em; line-height:0;}
+
+.modes{display:inline-flex; background:var(--surface); border:1px solid var(--line); border-radius:999px; padding:4px;}
+.modes button{
+  font:inherit; font-weight:700; border:0; background:transparent; color:var(--muted);
+  min-height:44px; padding:0 20px; border-radius:999px; cursor:pointer;
+}
+.modes button[aria-selected="true"]{background:var(--accent); color:var(--on-accent);}
+
+.stage{display:grid; gap:20px; grid-template-columns:1fr;}
+@media (min-width:880px){ .stage{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr); align-items:start;} .screen{position:sticky; top:calc(16px + env(safe-area-inset-top,0px));} }
+
+.screen{background:var(--screen); border-radius:20px; padding:12px 12px 10px; color:#DDE1F5;}
+canvas{display:block; width:100%; aspect-ratio:4/3; border-radius:12px; background:#12142A;}
+.thermo{position:relative; height:10px; border-radius:5px; margin:14px 4px 4px;
+  background:linear-gradient(90deg,#2c3f9e 0%,#4d7bf0 25%,#d0458a 50%,#f5a53b 75%,#fff0b8 100%);}
+.thermo .mark{position:absolute; top:-6px; width:5px; height:22px; background:#fff; border-radius:3px; transform:translateX(-50%); box-shadow:0 0 0 2px #12142A;}
+.ticks{display:flex; justify-content:space-between; color:#9EA4C8; font-size:.8rem; padding:2px 2px 0; font-variant-numeric:tabular-nums;}
+.boxbar{display:flex; justify-content:space-between; align-items:center; gap:12px; padding:10px 4px 2px;}
+.boxT{font-family:"Bricolage Grotesque",system-ui,sans-serif; font-weight:800; font-size:1.7rem; font-variant-numeric:tabular-nums;}
+.boxGas{color:#9EA4C8; margin-left:8px;}
+.screen-btn{font:inherit; font-weight:700; min-height:44px; padding:0 18px; border-radius:12px; cursor:pointer;
+  background:rgba(255,255,255,.08); color:#fff; border:1px solid rgba(255,255,255,.25);}
+
+.panel{background:var(--surface); border:1px solid var(--line); border-radius:20px; padding:clamp(18px,3vw,28px);}
+.row-between{display:flex; justify-content:space-between; align-items:baseline; gap:12px;}
+.lbl{font-weight:700;}
+.tread{font-variant-numeric:tabular-nums;}
+.tread span{color:var(--muted); margin-left:6px;}
+input[type=range]{width:100%; height:44px; accent-color:var(--accent); margin:4px 0 14px;}
+
+.seg{display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 4px;}
+.seg button{font:inherit; min-height:44px; padding:0 16px; border-radius:12px; cursor:pointer;
+  border:1px solid var(--line); background:var(--bg); color:var(--ink);}
+.seg button[aria-pressed="true"]{border-color:var(--accent); background:var(--accent); color:var(--on-accent); font-weight:700;}
+
+.eq{margin:20px 0 14px; padding:18px 20px; border-radius:16px; background:var(--bg); font-size:1.15rem; font-variant-numeric:tabular-nums; line-height:1.7;}
+.eq .result{font-family:"Bricolage Grotesque",system-ui,sans-serif; font-weight:800; font-size:clamp(1.8rem,4.5vw,2.5rem); line-height:1.2; margin-top:4px;}
+.rms{margin:0 0 20px; color:var(--muted);}
+.rms strong{color:var(--ink); font-variant-numeric:tabular-nums;}
+.prompts{margin:0; padding-left:1.2em;}
+.prompts li{margin-bottom:8px;}
+
+.btn{font:inherit; font-weight:700; min-height:48px; padding:0 22px; border-radius:12px; border:0; cursor:pointer;
+  background:var(--accent); color:var(--on-accent);}
+.btn.ghost{background:transparent; color:var(--ink); border:1px solid var(--line);}
+.btn:disabled{opacity:.5; cursor:default;}
+:focus-visible{outline:3px solid var(--accent); outline-offset:2px;}
+.screen :focus-visible{outline-color:#fff;}
+
+.muted{color:var(--muted);}
+.data{background:var(--bg); border-radius:12px; padding:12px 16px; font-variant-numeric:tabular-nums;}
+.data.small{font-size:.9rem; color:var(--muted); margin:18px 0 0; padding:8px 12px; display:inline-block;}
+.status{display:flex; gap:8px 18px; flex-wrap:wrap; color:var(--muted); font-variant-numeric:tabular-nums; margin-bottom:14px;}
+.status .streak{color:var(--good); font-weight:700;}
+.qtext{font-size:1.2rem; margin:0 0 18px;}
+.numwrap{display:flex; flex-wrap:wrap; align-items:center; gap:10px;}
+.numwrap input{font:inherit; font-size:1.3rem; width:8.5ch; min-height:52px; padding:0 12px; border-radius:12px;
+  border:2px solid var(--line); background:var(--bg); color:var(--ink); font-variant-numeric:tabular-nums;}
+.numwrap input:focus{border-color:var(--accent); outline:none;}
+.unit{font-size:1.15rem; margin-right:6px;}
+.opts{display:grid; gap:10px;}
+.opt{font:inherit; text-align:left; min-height:52px; padding:12px 16px; border-radius:12px; cursor:pointer;
+  border:2px solid var(--line); background:var(--bg); color:var(--ink);}
+.opt.right{border-color:var(--good); background:var(--good-bg);}
+.opt.wrong{border-color:var(--bad); background:var(--bad-bg);}
+.opt:disabled{cursor:default;}
+.fb{margin-top:18px;}
+.fb:empty{margin:0;}
+.verdict{font-family:"Bricolage Grotesque",system-ui,sans-serif; font-weight:800; font-size:1.5rem; margin:0 0 6px;}
+.verdict.ok{color:var(--good);}
+.verdict.no{color:var(--bad);}
+.verdict .pts{font-size:1.1rem; margin-left:8px;}
+.hint{margin:0 0 8px;}
+.sol{margin:0 0 16px; padding:12px 16px; border-left:4px solid var(--accent); background:var(--bg); border-radius:0 12px 12px 0; font-variant-numeric:tabular-nums;}
+.final{font-family:"Bricolage Grotesque",system-ui,sans-serif; font-weight:800; font-size:clamp(2.6rem,7vw,3.6rem); line-height:1; margin:6px 0 12px; font-variant-numeric:tabular-nums;}
+.actions{display:flex; gap:10px; flex-wrap:wrap; margin-top:18px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Kinetic Kelvin</h1>
+      <p class="lede">Temperature tells you how fast gas particles are moving. Explore how their average kinetic energy depends on temperature, then test yourself.</p>
+    </div>
+    <div class="modes" role="tablist" aria-label="Mode">
+      <button role="tab" id="tabExplore" aria-selected="true" aria-controls="explore">Explore</button>
+      <button role="tab" id="tabChallenge" aria-selected="false" aria-controls="challenge">Challenge</button>
+    </div>
+  </header>
+
+  <main class="stage">
+    <section class="screen" aria-label="Gas particles in a box">
+      <canvas id="gas" role="img" aria-label="Animated gas particles in a box. They move faster, and glow hotter, at higher temperatures."></canvas>
+      <div class="thermo" aria-hidden="true"><div class="mark" id="mark"></div></div>
+      <div class="ticks" aria-hidden="true"><span>0 K</span><span>300</span><span>600</span><span>900</span><span>1200 K</span></div>
+      <div class="boxbar">
+        <div><span class="boxT" id="boxT">300 K</span><span class="boxGas" id="boxGas">nitrogen</span></div>
+        <button class="screen-btn" id="pauseBtn" type="button">Pause</button>
+      </div>
+    </section>
+
+    <section class="panel" id="explore" role="tabpanel" aria-labelledby="tabExplore">
+      <div class="row-between">
+        <label for="tSlider" class="lbl">Temperature</label>
+        <span class="tread"><strong id="tK">300 K</strong><span id="tC">27 °C</span></span>
+      </div>
+      <input type="range" id="tSlider" min="0" max="1200" step="1" value="300">
+
+      <div class="lbl" id="gasLbl">Gas</div>
+      <div class="seg" role="group" aria-labelledby="gasLbl">
+        <button type="button" data-gas="he" aria-pressed="false">Helium</button>
+        <button type="button" data-gas="n2" aria-pressed="true">Nitrogen</button>
+        <button type="button" data-gas="xe" aria-pressed="false">Xenon</button>
+      </div>
+
+      <div class="eq">
+        <div>E<sub>k</sub> = <sup>3</sup>⁄<sub>2</sub> k<sub>B</sub>T</div>
+        <div>= 1.5 × 1.38 × 10<sup>−23</sup> × <span id="eqT">300</span></div>
+        <div class="result">= <span id="eqE">6.21</span> × 10<sup>−21</sup> J</div>
+      </div>
+      <p class="rms">At this temperature, <span id="gasName">nitrogen</span> particles have a root-mean-square (rms) speed of about <strong id="vrms">517</strong> m s<sup>−1</sup>.</p>
+
+      <h2>Think, pair, share</h2>
+      <ul class="prompts">
+        <li>Switch between helium and xenon without moving the slider. What stays the same? What changes, and why?</li>
+        <li>At what temperature is the average kinetic energy double its value at 300 K? Predict, then check.</li>
+        <li>Drag the slider to 0 K. What does the model say about the particles at absolute zero?</li>
+      </ul>
+    </section>
+
+    <section class="panel" id="challenge" role="tabpanel" aria-labelledby="tabChallenge" hidden>
+      <div id="cIntro">
+        <h2>Ten-question challenge</h2>
+        <p>A mix of calculations and reasoning questions. Give numerical answers to 3 significant figures; the unit is filled in for you.</p>
+        <p class="data">k<sub>B</sub> = 1.38 × 10<sup>−23</sup> J K<sup>−1</sup><br>T / K = θ / °C + 273</p>
+        <p class="muted">Quick correct answers earn bonus points, and a run of correct answers multiplies your score.</p>
+        <button class="btn" id="startBtn" type="button">Start challenge</button>
+        <p class="muted" id="bestIntro"></p>
+      </div>
+
+      <div id="cQ" hidden>
+        <div class="status"><span id="qNum">Question 1 of 10</span><span id="qScore">Score 0</span><span class="streak" id="qStreak"></span></div>
+        <p class="qtext" id="qText"></p>
+        <div id="numWrap" class="numwrap">
+          <input id="numIn" type="text" inputmode="decimal" autocomplete="off" aria-label="Your answer">
+          <span id="unit" class="unit"></span>
+          <button class="btn" id="checkBtn" type="button">Check</button>
+        </div>
+        <div id="opts" class="opts"></div>
+        <div id="fb" class="fb" aria-live="polite"></div>
+        <button class="btn" id="nextBtn" type="button" hidden>Next question</button>
+        <div><p class="data small">k<sub>B</sub> = 1.38 × 10<sup>−23</sup> J K<sup>−1</sup></p></div>
+      </div>
+
+      <div id="cEnd" hidden>
+        <h2>Challenge complete</h2>
+        <p class="final"><span id="endScore">0</span> points</p>
+        <p id="endSummary"></p>
+        <p class="muted" id="endBest"></p>
+        <div class="actions">
+          <button class="btn" id="againBtn" type="button">Play again</button>
+          <button class="btn ghost" id="toExploreBtn" type="button">Back to Explore</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- Physics constants ---------- */
+  const KB = 1.38e-23;           // Boltzmann constant, J/K
+  const C21 = 1.5 * KB * 1e21;   // 3/2 kB expressed in units of 10^-21 J per kelvin
+  const U = 1.66e-27;            // atomic mass unit, kg
+  const TMAX = 1200;
+
+  const $ = id => document.getElementById(id);
+  const fmt = x => { let s = Number(x).toPrecision(3); if (s.includes("e")) s = String(Number(s)); return s.replace("-", "−"); };
+  const randInt = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+  const shuffle = arr => { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+  /* ---------- Gas box animation ---------- */
+  const canvas = $("gas");
+  const ctx = canvas.getContext("2d");
+  let W = 0, H = 0;
+  const N = 50;
+  const BASE = 55; // display speed (px/s) of an average nitrogen particle at 300 K, in a 480 px wide box
+  let parts = [];
+  let boxKey = "";
+  let Tdisp = 300, Ttarget = 300, showT = true, paused = false;
+
+  function resize(){
+    const r = canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = r.width; H = r.height;
+    canvas.width = Math.max(1, Math.round(W * dpr));
+    canvas.height = Math.max(1, Math.round(H * dpr));
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = "#12142A"; ctx.fillRect(0, 0, W, H);
+  }
+  if ("ResizeObserver" in window) new ResizeObserver(resize).observe(canvas);
+  window.addEventListener("resize", resize);
+
+  function gauss(){ let u = 0; while (!u) u = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * Math.random()); }
+  // Speed factor drawn from a Maxwell-Boltzmann-like distribution (mean of f squared = 1)
+  function maxwellF(){ const a = gauss(), b = gauss(), c = gauss(); return Math.sqrt((a*a + b*b + c*c) / 3); }
+  function scatter(p){ const ang = Math.random() * 2 * Math.PI; p.dx = Math.cos(ang); p.dy = Math.sin(ang); p.f = maxwellF(); }
+  function makeParticle(m){ const p = { x: 0.05 + Math.random() * 0.9, y: 0.05 + Math.random() * 0.9, m }; scatter(p); return p; }
+  const radius = m => 3 + 1.2 * Math.cbrt(m);
+
+  function setBox(b){
+    const key = b.masses[0] + "|" + b.masses[b.masses.length - 1];
+    if (key !== boxKey){ parts = b.masses.map(makeParticle); boxKey = key; }
+    Ttarget = b.T; showT = b.showT; $("boxGas").textContent = b.label;
+  }
+  const fill = m => Array(N).fill(m);
+  const mix = (m1, m2) => Array(N / 2).fill(m1).concat(Array(N / 2).fill(m2));
+
+  // Thermal-camera colour ramp
+  const STOPS = [[0,[44,63,158]],[0.25,[77,123,240]],[0.5,[208,69,138]],[0.75,[245,165,59]],[1,[255,240,184]]];
+  function ramp(u){
+    u = Math.max(0, Math.min(1, u));
+    for (let i = 1; i < STOPS.length; i++){
+      if (u <= STOPS[i][0]){
+        const [u0, c0] = STOPS[i-1], [u1, c1] = STOPS[i];
+        const t = (u - u0) / (u1 - u0);
+        return "rgb(" + c0.map((c, k) => Math.round(c + (c1[k] - c) * t)).join(",") + ")";
+      }
+    }
+    return "rgb(255,240,184)";
+  }
+
+  function step(dt){
+    if (!W || !H) return;
+    const scale = W / 480;
+    const tf = Math.sqrt(Math.max(Tdisp, 0) / 300);
+    for (const p of parts){
+      const v = p.f * BASE * scale * tf * Math.sqrt(28 / p.m);
+      const r = radius(p.m) * Math.max(scale, 0.8);
+      const rx = r / W, ry = r / H;
+      p.x += p.dx * v * dt / W;
+      p.y += p.dy * v * dt / H;
+      if (p.x < rx){ p.x = rx; p.dx = Math.abs(p.dx); }
+      if (p.x > 1 - rx){ p.x = 1 - rx; p.dx = -Math.abs(p.dx); }
+      if (p.y < ry){ p.y = ry; p.dy = Math.abs(p.dy); }
+      if (p.y > 1 - ry){ p.y = 1 - ry; p.dy = -Math.abs(p.dy); }
+      if (Math.random() < dt * 0.6) scatter(p); // stands in for collisions between particles
+    }
+  }
+
+  function draw(){
+    if (!W || !H) return;
+    ctx.fillStyle = "rgba(18,20,42,0.38)";
+    ctx.fillRect(0, 0, W, H);
+    const scale = Math.max(W / 480, 0.8);
+    for (const p of parts){
+      // Colour by this particle's kinetic energy, which depends on T only (not on mass)
+      const e = p.f * p.f * Math.max(Tdisp, 0) / TMAX;
+      ctx.fillStyle = ramp(e);
+      ctx.beginPath();
+      ctx.arc(p.x * W, p.y * H, radius(p.m) * scale, 0, 2 * Math.PI);
+      ctx.fill();
+    }
+  }
+
+  const boxT = $("boxT"), mark = $("mark");
+  let last = performance.now();
+  function frame(now){
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    if (!paused){ Tdisp += (Ttarget - Tdisp) * Math.min(1, dt * 2.5); step(dt); }
+    draw();
+    if (showT){
+      boxT.textContent = Math.round(Tdisp) + " K";
+      mark.hidden = false;
+      mark.style.left = (Math.max(0, Math.min(TMAX, Tdisp)) / TMAX * 100) + "%";
+    } else {
+      boxT.textContent = "? K";
+      mark.hidden = true;
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  $("pauseBtn").addEventListener("click", () => {
+    paused = !paused;
+    $("pauseBtn").textContent = paused ? "Play" : "Pause";
+  });
+
+  /* ---------- Explore mode ---------- */
+  const GASES = { he:{ name:"helium", m:4 }, n2:{ name:"nitrogen", m:28 }, xe:{ name:"xenon", m:131 } };
+  let exploreGas = "n2";
+  let mode = "explore";
+
+  function exploreBox(){
+    const T = Number($("tSlider").value);
+    const g = GASES[exploreGas];
+    return { T, masses: fill(g.m), showT: true, label: g.name };
+  }
+
+  function updateExplore(){
+    const T = Number($("tSlider").value);
+    const g = GASES[exploreGas];
+    $("tK").textContent = T + " K";
+    $("tC").textContent = String(T - 273).replace("-", "−") + " °C";
+    $("eqT").textContent = T;
+    $("eqE").textContent = T === 0 ? "0" : fmt(C21 * T);
+    $("gasName").textContent = g.name;
+    const v = Math.sqrt(3 * KB * T / (g.m * U));
+    $("vrms").textContent = T === 0 ? "0" : fmt(v);
+    if (mode === "explore") setBox(exploreBox());
+  }
+  $("tSlider").addEventListener("input", updateExplore);
+  document.querySelectorAll(".seg button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      exploreGas = btn.dataset.gas;
+      document.querySelectorAll(".seg button").forEach(b => b.setAttribute("aria-pressed", String(b === btn)));
+      updateExplore();
+    });
+  });
+
+  /* ---------- Mode switching ---------- */
+  function setMode(m){
+    mode = m;
+    $("tabExplore").setAttribute("aria-selected", String(m === "explore"));
+    $("tabChallenge").setAttribute("aria-selected", String(m === "challenge"));
+    $("explore").hidden = m !== "explore";
+    $("challenge").hidden = m !== "challenge";
+    if (m === "explore") setBox(exploreBox());
+    else if (challengeBox) setBox(challengeBox);
+  }
+  $("tabExplore").addEventListener("click", () => setMode("explore"));
+  $("tabChallenge").addEventListener("click", () => setMode("challenge"));
+
+  /* ---------- Challenge questions ---------- */
+  const QGASES = [
+    { name:"helium", m:4 }, { name:"neon", m:20 }, { name:"nitrogen", m:28 },
+    { name:"oxygen", m:32 }, { name:"argon", m:40 }
+  ];
+  const E21 = "× 10<sup>−21</sup> J";
+
+  const makers = {
+    // Kelvin temperature to mean Ek
+    A(){
+      const g = pick(QGASES);
+      const T = 10 * randInt(15, 110);
+      const ans = C21 * T;
+      return {
+        kind:"num", unit:E21, answer:ans, scale:1e-21,
+        text:`A sample of ${g.name} is at <strong>${T} K</strong>. Calculate the average kinetic energy of its particles.`,
+        mistakes:[
+          { v: KB * T * 1e21, msg:"That’s k<sub>B</sub>T on its own. Don’t forget the factor of 3⁄2." },
+          { v: 0.5 * KB * T * 1e21, msg:"It looks like you used ½ instead of 3⁄2." }
+        ],
+        solution:`E<sub>k</sub> = 3⁄2 k<sub>B</sub>T = 1.5 × 1.38 × 10<sup>−23</sup> × ${T} = <strong>${fmt(ans)} ${E21}</strong>`,
+        box:{ T, masses: fill(g.m), showT: true, label: g.name }
+      };
+    },
+    // Celsius temperature to mean Ek (conversion trap)
+    B(){
+      const g = pick(QGASES);
+      let Tc = 0; while (Tc === 0) Tc = 5 * randInt(-10, 120);
+      const TK = Tc + 273;
+      const ans = C21 * TK;
+      const tcTxt = String(Tc).replace("-", "−");
+      return {
+        kind:"num", unit:E21, answer:ans, scale:1e-21,
+        text:`A container of ${g.name} is at <strong>${tcTxt} °C</strong>. Calculate the average kinetic energy of its particles.`,
+        mistakes:[
+          { v: C21 * Tc, msg:"That’s the answer you get using the Celsius temperature. Convert to kelvin first." },
+          { v: KB * TK * 1e21, msg:"That’s k<sub>B</sub>T on its own. Don’t forget the factor of 3⁄2." }
+        ],
+        solution:`T = ${tcTxt} + 273 = ${TK} K<br>E<sub>k</sub> = 3⁄2 k<sub>B</sub>T = 1.5 × 1.38 × 10<sup>−23</sup> × ${TK} = <strong>${fmt(ans)} ${E21}</strong>`,
+        box:{ T: TK, masses: fill(g.m), showT: true, label: g.name }
+      };
+    },
+    // Mean Ek to temperature
+    C(){
+      const g = pick(QGASES);
+      const Ttrue = 10 * randInt(20, 100);
+      const Ek = Number((C21 * Ttrue).toPrecision(3));
+      const ans = Ek / C21;
+      return {
+        kind:"num", unit:"K", answer:ans, scale:null,
+        text:`The average kinetic energy of the particles in a sample of ${g.name} is <strong>${fmt(Ek)} ${E21}</strong>. Calculate the temperature of the gas in kelvin.`,
+        mistakes:[
+          { v: ans - 273, msg:"That’s the temperature in degrees Celsius. The question asks for kelvin." },
+          { v: Ek / (KB * 1e21), msg:"It looks like you divided by k<sub>B</sub> only. Rearrange to T = 2E<sub>k</sub> ⁄ 3k<sub>B</sub>." }
+        ],
+        solution:`T = 2E<sub>k</sub> ⁄ 3k<sub>B</sub> = (2 × ${fmt(Ek)} × 10<sup>−21</sup>) ⁄ (3 × 1.38 × 10<sup>−23</sup>) = <strong>${fmt(ans)} K</strong>`,
+        box:{ T: ans, masses: fill(g.m), showT: false, label: g.name }
+      };
+    },
+    // Kelvin scaling reasoning
+    D(){
+      const f = pick([2, 3, 4]);
+      const T1 = pick([200, 250, 300].filter(t => t * f <= TMAX));
+      const g = pick(QGASES);
+      const opts = [
+        { html:`× ${fmt(f)}`, correct:true },
+        { html:`× ${fmt(Math.sqrt(f))}`, correct:false },
+        { html:`× ${fmt(f * f)}`, correct:false },
+        { html:`× ${fmt(1 / f)}`, correct:false }
+      ];
+      return {
+        kind:"mcq", options: shuffle(opts),
+        text:`A sample of ${g.name} is heated from <strong>${T1} K</strong> to <strong>${T1 * f} K</strong>. By what factor does the average kinetic energy of its particles change?`,
+        solution:`E<sub>k</sub> = 3⁄2 k<sub>B</sub>T, so E<sub>k</sub> ∝ T. The kelvin temperature is multiplied by ${f}, so the average kinetic energy is multiplied by <strong>${f}</strong>.`,
+        box:{ T: T1, masses: fill(g.m), showT: true, label: g.name }, after: T1 * f
+      };
+    },
+    // Celsius scaling trap
+    E(){
+      const TK1 = pick([300, 320, 350]);
+      const Tc1 = TK1 - 273, Tc2 = 2 * TK1 - 273;
+      const g = pick(QGASES);
+      const opts = [
+        { html:"× 2", correct:true },
+        { html:`× ${fmt(Tc2 / Tc1)}`, correct:false },
+        { html:"× 1.41", correct:false },
+        { html:"× 4", correct:false }
+      ];
+      return {
+        kind:"mcq", options: shuffle(opts),
+        text:`A sample of ${g.name} is heated from <strong>${Tc1} °C</strong> to <strong>${Tc2} °C</strong>. By what factor does the average kinetic energy of its particles increase?`,
+        solution:`Convert to kelvin first: ${Tc1} °C = ${TK1} K and ${Tc2} °C = ${2 * TK1} K. E<sub>k</sub> ∝ T, so the factor is ${2 * TK1} ⁄ ${TK1} = <strong>2</strong>. Using Celsius would give × ${fmt(Tc2 / Tc1)}, a common trap.`,
+        box:{ T: TK1, masses: fill(g.m), showT: true, label: g.name }, after: 2 * TK1
+      };
+    },
+    // Speed and temperature
+    F(){
+      const f = pick([2, 3]);
+      const T1 = f === 2 ? 300 : 130;
+      const word = f === 2 ? "doubles" : "triples";
+      const g = pick(QGASES);
+      const opts = [
+        { html:`× ${f * f}`, correct:true },
+        { html:`× ${f}`, correct:false },
+        { html:`× ${fmt(Math.sqrt(f))}`, correct:false },
+        { html:`× ${f * f * f}`, correct:false }
+      ];
+      return {
+        kind:"mcq", options: shuffle(opts),
+        text:`A sample of ${g.name} is heated until the rms speed of its particles ${word}. By what factor has the kelvin temperature increased?`,
+        solution:`E<sub>k</sub> = ½mv<sup>2</sup>, so E<sub>k</sub> ∝ v<sup>2</sup>. Also E<sub>k</sub> ∝ T, so T ∝ v<sup>2</sup>. Multiplying the speed by ${f} multiplies the temperature by ${f}<sup>2</sup> = <strong>${f * f}</strong>.`,
+        box:{ T: T1, masses: fill(g.m), showT: true, label: g.name }, after: T1 * f * f
+      };
+    },
+    // Different gases at the same temperature
+    G(){
+      const [a, b] = pick([[{ name:"helium", m:4 }, { name:"xenon", m:131 }], [{ name:"neon", m:20 }, { name:"krypton", m:84 }]]);
+      const T = 10 * randInt(25, 45);
+      const opts = [
+        { html:`Both have the same average kinetic energy, and the ${a.name} atoms move faster on average.`, correct:true },
+        { html:"Both have the same average kinetic energy and the same average speed.", correct:false },
+        { html:`The ${b.name} atoms have more kinetic energy on average, because they are heavier.`, correct:false },
+        { html:`The ${a.name} atoms have more kinetic energy on average, because they move faster.`, correct:false }
+      ];
+      return {
+        kind:"mcq", options: shuffle(opts),
+        text:`Samples of ${a.name} and ${b.name} are mixed in a container at <strong>${T} K</strong>. Which statement is correct?`,
+        solution:`E<sub>k</sub> = 3⁄2 k<sub>B</sub>T depends only on temperature, so both gases have the same average kinetic energy. Since E<sub>k</sub> = ½mv<sup>2</sup>, the lighter ${a.name} atoms must move faster. Look at the box: the colours match, but the small atoms zip around.`,
+        box:{ T, masses: mix(a.m, b.m), showT: true, label: `${a.name} and ${b.name}` }
+      };
+    }
+  };
+
+  /* ---------- Challenge flow ---------- */
+  const BEST_KEY = "kinetic-kelvin-best";
+  function getBest(){ try { return Number(localStorage.getItem(BEST_KEY)) || 0; } catch(e){ return 0; } }
+  function setBest(v){ try { localStorage.setItem(BEST_KEY, String(v)); } catch(e){} }
+  function showBestIntro(){ const b = getBest(); $("bestIntro").textContent = b ? `Best score on this device: ${b}` : ""; }
+  showBestIntro();
+
+  let qs = [], qi = 0, score = 0, streak = 0, correctCount = 0, qStart = 0, answered = false, challengeBox = null;
+
+  function startChallenge(){
+    const types = shuffle(["A","A","B","B","C","C","D","E","F","G"]);
+    qs = types.map(t => makers[t]());
+    qi = 0; score = 0; streak = 0; correctCount = 0;
+    $("cIntro").hidden = true; $("cEnd").hidden = true; $("cQ").hidden = false;
+    showQ();
+  }
+
+  function updateStatus(){
+    $("qNum").textContent = `Question ${qi + 1} of ${qs.length}`;
+    $("qScore").textContent = `Score ${score}`;
+    $("qStreak").textContent = streak >= 2 ? `Streak ${streak}` : "";
+  }
+
+  function showQ(){
+    const q = qs[qi];
+    answered = false;
+    updateStatus();
+    $("qText").innerHTML = q.text;
+    $("fb").innerHTML = "";
+    $("nextBtn").hidden = true;
+    const opts = $("opts");
+    opts.innerHTML = "";
+    if (q.kind === "num"){
+      $("numWrap").hidden = false;
+      $("numIn").value = ""; $("numIn").disabled = false; $("checkBtn").disabled = false;
+      $("unit").innerHTML = q.unit;
+      $("numIn").focus({ preventScroll: true });
+    } else {
+      $("numWrap").hidden = true;
+      q.options.forEach((o, i) => {
+        const b = document.createElement("button");
+        b.type = "button"; b.className = "opt"; b.innerHTML = o.html;
+        b.addEventListener("click", () => answerMcq(i));
+        opts.appendChild(b);
+      });
+    }
+    challengeBox = q.box;
+    setBox(q.box);
+    qStart = performance.now();
+  }
+
+  function parseNum(s, scale){
+    s = s.trim().replace(/,/g, ".").replace(/−/g, "-").replace(/\s+/g, "");
+    if (!s) return NaN;
+    const m = s.match(/^([-+]?\d*\.?\d+)(?:[x×*]10\^?([-+]?\d+))?$/i);
+    let v;
+    if (m){ v = parseFloat(m[1]); if (m[2] !== undefined) v *= Math.pow(10, parseInt(m[2], 10)); }
+    else v = Number(s);
+    if (!isFinite(v)) return NaN;
+    if (scale && v !== 0 && Math.abs(v) < 1e-15) v /= scale; // they typed the full value, e.g. 6.21e-21
+    return v;
+  }
+  const near = (v, target, tol) => Math.abs(v - target) <= tol * Math.abs(target);
+
+  function answerNum(){
+    if (answered) return;
+    const q = qs[qi];
+    const v = parseNum($("numIn").value, q.scale);
+    if (isNaN(v)){
+      $("fb").innerHTML = `<p class="hint">Type a number first, for example 6.21.</p>`;
+      return;
+    }
+    const ok = near(v, q.answer, 0.03);
+    let hint = "";
+    if (!ok){
+      const m = q.mistakes.find(mk => near(v, mk.v, 0.03));
+      hint = m ? m.msg : "";
+    }
+    $("numIn").disabled = true; $("checkBtn").disabled = true;
+    grade(ok, hint);
+  }
+  $("checkBtn").addEventListener("click", answerNum);
+  $("numIn").addEventListener("keydown", e => { if (e.key === "Enter") answerNum(); });
+
+  function answerMcq(i){
+    if (answered) return;
+    const q = qs[qi];
+    const btns = $("opts").querySelectorAll(".opt");
+    btns.forEach((b, k) => {
+      b.disabled = true;
+      if (q.options[k].correct) b.classList.add("right");
+      else if (k === i) b.classList.add("wrong");
+    });
+    grade(q.options[i].correct, "");
+  }
+
+  function grade(ok, hint){
+    answered = true;
+    const q = qs[qi];
+    const secs = (performance.now() - qStart) / 1000;
+    let pts = 0;
+    if (ok){
+      streak++; correctCount++;
+      const bonus = Math.max(0, Math.round(50 * (1 - secs / 40)));
+      const mult = Math.min(2, 1 + 0.25 * (streak - 1));
+      pts = Math.round((100 + bonus) * mult);
+      score += pts;
+    } else {
+      streak = 0;
+    }
+    updateStatus();
+    $("fb").innerHTML =
+      `<p class="verdict ${ok ? "ok" : "no"}">${ok ? "Correct" : "Not quite"}${ok ? `<span class="pts">+${pts}</span>` : ""}</p>` +
+      (hint ? `<p class="hint">${hint}</p>` : "") +
+      `<p class="sol">${q.solution}</p>`;
+    if (q.after !== undefined){
+      challengeBox = Object.assign({}, q.box, { T: q.after });
+      setBox(challengeBox);
+    }
+    if (q.box.showT === false){
+      challengeBox = Object.assign({}, q.box, { showT: true });
+      setBox(challengeBox);
+    }
+    const nb = $("nextBtn");
+    nb.textContent = qi === qs.length - 1 ? "See results" : "Next question";
+    nb.hidden = false;
+    nb.focus({ preventScroll: true });
+  }
+
+  $("nextBtn").addEventListener("click", () => {
+    if (qi < qs.length - 1){ qi++; showQ(); }
+    else endChallenge();
+  });
+
+  function endChallenge(){
+    $("cQ").hidden = true; $("cEnd").hidden = false;
+    $("endScore").textContent = score;
+    let msg;
+    if (correctCount >= 9) msg = "Excellent. You can handle both the calculations and the traps.";
+    else if (correctCount >= 6) msg = "Good work. Read the worked solutions on any you missed, then go again.";
+    else msg = "Worth another go. Watch out for Celsius temperatures and the factor of 3⁄2.";
+    $("endSummary").innerHTML = `You got <strong>${correctCount} out of ${qs.length}</strong> correct. ${msg}`;
+    const best = getBest();
+    if (score > best){ setBest(score); $("endBest").textContent = "New best score on this device."; }
+    else $("endBest").textContent = `Best score on this device: ${best}`;
+    showBestIntro();
+  }
+
+  $("startBtn").addEventListener("click", startChallenge);
+  $("againBtn").addEventListener("click", startChallenge);
+  $("toExploreBtn").addEventListener("click", () => {
+    $("cEnd").hidden = true; $("cIntro").hidden = false; challengeBox = null;
+    setMode("explore");
+  });
+
+  /* ---------- Start ---------- */
+  resize();
+  updateExplore();
+})();
+</script>
+</body>
+</html>
